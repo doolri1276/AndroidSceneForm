@@ -3,6 +3,7 @@ package kr.co.naulsnow.androidsceneform;
 import android.graphics.Color;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
@@ -10,9 +11,14 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.ar.core.Anchor;
+import com.google.ar.core.CameraConfig;
+import com.google.ar.core.Config;
 import com.google.ar.core.HitResult;
 import com.google.ar.core.Plane;
+import com.google.ar.core.Session;
+import com.google.ar.core.exceptions.UnavailableException;
 import com.google.ar.sceneform.AnchorNode;
+import com.google.ar.sceneform.Camera;
 import com.google.ar.sceneform.Node;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.ModelRenderable;
@@ -21,9 +27,11 @@ import com.google.ar.sceneform.ux.ArFragment;
 import com.google.ar.sceneform.ux.BaseArFragment;
 import com.google.ar.sceneform.ux.TransformableNode;
 
+import javax.sql.CommonDataSource;
+
 public class MainActivity extends AppCompatActivity {
 
-    private final String TAG = MainActivity.class.getSimpleName();
+    private final String TAG = "TAG_"+MainActivity.class.getSimpleName();
 
     ArFragment arFragment;
     private ModelRenderable renBear, renCat, renCow, renDog, renElephant, renFerret, renHippo, renHorse, renKoala, renLion, renReindeer, renWolverine;
@@ -36,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
 
     //데이터들
     int selected = 1; //Default Bear is selected
+    boolean installRequested;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,9 +59,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setUpModels(){
-
-
-
 
         ModelRenderable.builder()
                 .setSource(this, R.raw.bear)
@@ -217,6 +223,12 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+
+
+
+//        arFragment.getArSceneView().getSession().setCameraConfig(new CameraConfig(arFragment.getArSceneView().getSession(), ));
+
+
     }
 
     private void setViews(){
@@ -248,6 +260,43 @@ public class MainActivity extends AppCompatActivity {
 
             });
         }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        Session session = arFragment.getArSceneView().getSession();
+
+        Log.d(TAG, "session 널이다 : "+(session == null));
+
+        if(session == null){
+
+            try{
+                session = BaseTool.createArSession(this, installRequested);
+
+                if(session == null ){
+                    installRequested = CameraPermissionHelper.hasCameraPermission(this);
+                    return;
+                }else{
+                    arFragment.getArSceneView().setupSession(session);
+                }
+
+            } catch (UnavailableException e) {
+                BaseTool.handleSessionException(this, e);
+            }
+
+        }
+
+        if(session!=null){
+            Config config = session.getConfig();
+            config.setFocusMode(Config.FocusMode.AUTO);
+            config.setLightEstimationMode(Config.LightEstimationMode.AMBIENT_INTENSITY);
+            config.setCloudAnchorMode(Config.CloudAnchorMode.ENABLED);
+            arFragment.getArSceneView().getSession().configure(config);
+
+        }
+
     }
 
     private void setBackground(int id){
